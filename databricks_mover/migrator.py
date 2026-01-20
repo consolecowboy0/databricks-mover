@@ -1,5 +1,7 @@
 import logging
 
+from tqdm import tqdm
+
 class SchemaMigrator:
     def __init__(self, spark, source_catalog_schema, dest_catalog_schema):
         """
@@ -31,13 +33,29 @@ class SchemaMigrator:
             self.logger.error(f"Failed to list tables in {self.source}: {e}")
             raise
 
-        for row in tables:
+        for row in tqdm(tables, desc="Migrating tables"):
             table_name = row['tableName']
             # Skip temporary views if any
             if row['isTemporary']:
                 continue
                 
             self._move_table(table_name, drop_source)
+
+    def migrate_table(self, table_name, drop_source=False):
+        """
+        Migrate a single table from source to destination.
+        """
+        self.logger.info(f"Starting single table migration for {table_name}")
+        
+        # Verify table exists
+        try:
+            # Efficient check if table exists
+            self.spark.sql(f"DESCRIBE {self.source}.{table_name}")
+        except Exception:
+            self.logger.error(f"Table {table_name} does not exist in {self.source}")
+            raise
+
+        self._move_table(table_name, drop_source)
 
     def _move_table(self, table_name, drop_source):
         src_table = f"{self.source}.{table_name}"

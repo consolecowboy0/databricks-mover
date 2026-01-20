@@ -67,5 +67,26 @@ class TestSchemaMigrator(unittest.TestCase):
         
         self.mock_spark.sql.assert_any_call(f"DROP TABLE {self.source}.my_table")
 
+    def test_migrate_single_table(self):
+        self.migrator.migrate_table('specific_table', drop_source=False)
+        
+        # Verify describe called
+        self.mock_spark.sql.assert_any_call(f"DESCRIBE {self.source}.specific_table")
+        
+        # Verify logic
+        expected_query = f"CREATE TABLE IF NOT EXISTS {self.dest}.specific_table DEEP CLONE {self.source}.specific_table"
+        self.mock_spark.sql.assert_any_call(expected_query)
+
+    def test_migrate_single_table_not_exists(self):
+        def sql_side_effect(query):
+            if "DESCRIBE" in query:
+                raise Exception("Table not found")
+            return MagicMock()
+            
+        self.mock_spark.sql.side_effect = sql_side_effect
+        
+        with self.assertRaises(Exception):
+            self.migrator.migrate_table('non_existent', drop_source=False)
+
 if __name__ == '__main__':
     unittest.main()
