@@ -27,7 +27,8 @@ class TestSchemaMigrator(unittest.TestCase):
 
         # Verification
         self.mock_spark.sql.assert_any_call(f"SHOW TABLES IN {self.source}")
-        expected_query = f"CREATE TABLE IF NOT EXISTS {self.dest}.my_table DEEP CLONE {self.source}.my_table"
+        # Expect prefix schema_src_
+        expected_query = f"CREATE TABLE IF NOT EXISTS {self.dest}.schema_src_my_table DEEP CLONE {self.source}.my_table"
         self.mock_spark.sql.assert_any_call(expected_query)
 
     def test_migrate_fallback_ctas(self):
@@ -47,7 +48,7 @@ class TestSchemaMigrator(unittest.TestCase):
 
         self.migrator.migrate(drop_source=False)
         
-        expected_query = f"CREATE TABLE IF NOT EXISTS {self.dest}.my_table AS SELECT * FROM {self.source}.my_table"
+        expected_query = f"CREATE TABLE IF NOT EXISTS {self.dest}.schema_src_my_table AS SELECT * FROM {self.source}.my_table"
         self.mock_spark.sql.assert_any_call(expected_query)
 
     def test_drop_source(self):
@@ -73,8 +74,8 @@ class TestSchemaMigrator(unittest.TestCase):
         # Verify describe called
         self.mock_spark.sql.assert_any_call(f"DESCRIBE {self.source}.specific_table")
         
-        # Verify logic
-        expected_query = f"CREATE TABLE IF NOT EXISTS {self.dest}.specific_table DEEP CLONE {self.source}.specific_table"
+        # Verify logic with prefix
+        expected_query = f"CREATE TABLE IF NOT EXISTS {self.dest}.schema_src_specific_table DEEP CLONE {self.source}.specific_table"
         self.mock_spark.sql.assert_any_call(expected_query)
 
     def test_migrate_single_table_not_exists(self):

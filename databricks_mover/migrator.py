@@ -16,6 +16,13 @@ class SchemaMigrator:
         self.source = source_catalog_schema
         self.dest = dest_catalog_schema
         self.logger = logging.getLogger("SchemaMigrator")
+        
+        # Extract schema name from source for prefixing
+        if '.' in self.source:
+            self.source_schema_name = self.source.split('.')[-1]
+        else:
+            self.source_schema_name = self.source
+            
         # Basic setup
         logging.basicConfig(level=logging.INFO)
 
@@ -59,7 +66,10 @@ class SchemaMigrator:
 
     def _move_table(self, table_name, drop_source):
         src_table = f"{self.source}.{table_name}"
-        dest_table = f"{self.dest}.{table_name}"
+        
+        # Prepend source schema name to destination table name
+        dest_table_name = f"{self.source_schema_name}_{table_name}"
+        dest_table = f"{self.dest}.{dest_table_name}"
         
         self.logger.info(f"Migrating table: {src_table} -> {dest_table}")
 
