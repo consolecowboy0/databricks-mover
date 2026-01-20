@@ -1,0 +1,2 @@
+# No external dependencies needed for this simple script in Databricks Runtime
+# pyspark is built-in
