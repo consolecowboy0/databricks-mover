@@ -8,8 +8,9 @@ A simple utility to move (clone) tables from one Unity Catalog schema to another
 2. Open `notebooks/run_migration`.
 3. Enter the **Source Schema** (e.g., `sandbox_dev.shipping`).
 4. Enter the **Destination Schema** (e.g., `sandbox_prod.shipping`).
-5. (Optional) Check `drop_source` to delete tables from the source after a successful move.
-6. Run the notebook.
+5. (Optional) Enter a **Table Name** to move only a specific table.
+6. (Optional) Check `drop_source` to delete tables from the source after a successful move.
+7. Run the notebook.
 
 ## Features
 
