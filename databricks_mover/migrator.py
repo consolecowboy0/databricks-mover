@@ -1,12 +1,13 @@
 import logging
-
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
+
 
 class SchemaMigrator:
     def __init__(self, spark, source_catalog_schema, dest_catalog_schema):
         """
         Initialize the migrator.
-        
+
         Args:
             spark: SparkSession object.
             source_catalog_schema (str): Source schema in 'catalog.schema' format.
@@ -16,22 +17,32 @@ class SchemaMigrator:
         self.source = source_catalog_schema
         self.dest = dest_catalog_schema
         self.logger = logging.getLogger("SchemaMigrator")
-        
+
         # Extract schema name from source for prefixing
         if '.' in self.source:
             self.source_schema_name = self.source.split('.')[-1]
         else:
             self.source_schema_name = self.source
-            
-        # Basic setup
-        logging.basicConfig(level=logging.INFO)
+
+        # Logging setup to file
+        log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler = logging.FileHandler('migration.log')
+        file_handler.setFormatter(log_formatter)
+
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+
+        # Clear existing handlers and add the file handler
+        if root_logger.hasHandlers():
+            root_logger.handlers.clear()
+        root_logger.addHandler(file_handler)
 
     def migrate(self, drop_source=False):
         """
         Migrate all tables from source to destination.
         """
         self.logger.info(f"Starting migration from {self.source} to {self.dest}")
-        
+
         # List tables needs to handle Unity Catalog correctly
         # We can use spark.catalog.listTables(schema) or SQL
         try:
@@ -40,20 +51,21 @@ class SchemaMigrator:
             self.logger.error(f"Failed to list tables in {self.source}: {e}")
             raise
 
-        for row in tqdm(tables, desc="Migrating tables"):
-            table_name = row['tableName']
-            # Skip temporary views if any
-            if row['isTemporary']:
-                continue
-                
-            self._move_table(table_name, drop_source)
+        with logging_redirect_tqdm():
+            for row in tqdm(tables, desc="Migrating tables"):
+                table_name = row['tableName']
+                # Skip temporary views if any
+                if row['isTemporary']:
+                    continue
+
+                self._move_table(table_name, drop_source)
 
     def migrate_table(self, table_name, drop_source=False):
         """
         Migrate a single table from source to destination.
         """
         self.logger.info(f"Starting single table migration for {table_name}")
-        
+
         # Verify table exists
         try:
             # Efficient check if table exists
@@ -66,11 +78,11 @@ class SchemaMigrator:
 
     def _move_table(self, table_name, drop_source):
         src_table = f"{self.source}.{table_name}"
-        
+
         # Prepend source schema name to destination table name
         dest_table_name = f"{self.source_schema_name}_{table_name}"
         dest_table = f"{self.dest}.{dest_table_name}"
-        
+
         self.logger.info(f"Migrating table: {src_table} -> {dest_table}")
 
         try:
